@@ -1,35 +1,9 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import 'board_space.dart';
 
 void main() {
   runApp(const MyApp());
-}
-
-bool minesSet = false;
-int mineCounter = 0;
-List<BoardSpace> board = List.generate(100, (index) => BoardSpace());
-
-void setMinesRandomly() {
-  if (!minesSet) {
-    while (mineCounter < 80) {
-      Random rand = Random();
-      int num = rand.nextInt(100);
-      if (!board[num].isMined && board[num].enabled) {
-        board[num].isMined = true;
-        mineCounter++;
-      }
-    }
-    minesSet = true;
-  }
-}
-
-void restart() {
-  minesSet = false;
-  mineCounter = 0;
-  board = List.generate(100, (index) => BoardSpace());
 }
 
 class MyApp extends StatelessWidget {
@@ -70,11 +44,7 @@ class _MyHomePageState extends State<MyHomePage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Restart',
-            onPressed: () {
-              setState(() {
-                restart();
-              });
-            },
+            onPressed: () {},
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -83,31 +53,12 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ],
       ),
-      body: Column(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          Text(
-            "${mineCounter} Mines left",
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: Colors.blue,
-            ),
-          ),
-          Expanded(
-            child: GridView.builder(
-              shrinkWrap: true,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 10,
-              ),
-              itemCount: 100,
-              itemBuilder: (context, index) {
-                return board[index];
-              },
-            ),
-          ),
-        ],
+      body: const MineField(
+        columns: 10,
+        rows: 10,
+        mines: 3,
       ),
+      backgroundColor: Colors.black,
     );
   }
 }
