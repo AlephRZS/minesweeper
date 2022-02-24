@@ -32,8 +32,15 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  bool textsHidden = false;
-  List<bool> buttonState = List<bool>.generate(100, (i) => false);
+  void restartGame() {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        transitionDuration: Duration.zero,
+        pageBuilder: (_, __, ___) => const MyHomePage(title: 'Minesweeper'),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +51,9 @@ class _MyHomePageState extends State<MyHomePage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Restart',
-            onPressed: () {},
+            onPressed: () {
+              restartGame();
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -53,11 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ],
       ),
-      body: const MineField(
-        columns: 10,
-        rows: 10,
-        mines: 3,
-      ),
+      body: const MineField(columns: 10, rows: 10, mines: 30),
       backgroundColor: Colors.black,
     );
   }

@@ -23,6 +23,7 @@ class _MineFieldState extends State<MineField> {
   bool minesSet = false;
   List<BoardSpace>? board;
   String message = "";
+  bool lostGame = false;
 
   bool flagAvailable() {
     return flagsSet < widget.mines;
@@ -31,7 +32,13 @@ class _MineFieldState extends State<MineField> {
   void loseGame() {
     setState(() {
       message = "You lost";
+      lostGame = true;
     });
+  }
+
+  int countBombs(int index) {
+    Random rand = Random();
+    return rand.nextInt(8);
   }
 
   void setMines(int index) {
@@ -39,7 +46,7 @@ class _MineFieldState extends State<MineField> {
     while (mines < widget.mines) {
       int mineIndex = rand.nextInt(widget.rows * widget.columns);
       if (mineIndex != index) {
-        board![index] = BoardSpace(
+        board![mineIndex] = BoardSpace(
           parentState: this,
           index: index,
           hasMine: true,
@@ -47,13 +54,16 @@ class _MineFieldState extends State<MineField> {
         mines++;
       }
     }
-    minesSet = true;
+    setState(() {
+      message = "$mines mines remaining";
+      minesSet = true;
+    });
   }
 
   @override
   void initState() {
     super.initState();
-    message = "${widget.mines} Mines Remaining";
+    message = "Start game with ${widget.mines} mines";
     board = List<BoardSpace>.generate(
       widget.columns * widget.rows,
       (index) => BoardSpace(
@@ -86,11 +96,20 @@ class _MineFieldState extends State<MineField> {
             itemCount: 100,
             itemBuilder: (context, index) {
               return (board != null)
-                  ? board![index]
+                  ? Stack(
+                      children: [
+                        board![index],
+                        Center(
+                          child: board![index].hasMine && lostGame
+                              ? const Icon(Icons.offline_bolt)
+                              : null,
+                        ),
+                      ],
+                    )
                   : BoardSpace(
                       parentState: this,
                       index: 0,
-                      hasMine: true,
+                      hasMine: false,
                     );
             },
           ),
@@ -119,6 +138,7 @@ class _BoardSpaceState extends State<BoardSpace> {
   bool clickable = true;
   bool revealed = false;
   bool hasFlag = false;
+  int bombsNearby = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -129,14 +149,21 @@ class _BoardSpaceState extends State<BoardSpace> {
         splashColor: Colors.grey,
         onLongPress: clickable ? _buttonFlag : null,
         onTap: clickable ? _buttonClick : null,
-        child: Center(
-          child: hasFlag ? const Icon(Icons.flag_sharp) : null,
-        ),
+        child: Stack(children: [
+          Center(
+            child: hasFlag ? const Icon(Icons.flag_sharp) : null,
+          ),
+          Center(
+              child: bombsNearby != 0 && revealed && !widget.hasMine
+                  ? Text("$bombsNearby")
+                  : null),
+        ]),
       ),
     );
   }
 
   void _buttonFlag() {
+    if (widget.parentState.lostGame) return;
     if (!hasFlag && widget.parentState.flagAvailable()) {
       widget.parentState.flagsSet++;
     } else if (hasFlag) {
@@ -147,9 +174,15 @@ class _BoardSpaceState extends State<BoardSpace> {
     setState(() {
       hasFlag = !hasFlag;
     });
+    _MineFieldState boardState = widget.parentState;
+    boardState.setState(() {
+      boardState.message =
+          "${boardState.mines - boardState.flagsSet} mines remaining";
+    });
   }
 
   void _buttonClick() {
+    if (widget.parentState.lostGame) return;
     if (!hasFlag) {
       if (!widget.parentState.minesSet) {
         widget.parentState.setMines(widget.index);
@@ -157,6 +190,9 @@ class _BoardSpaceState extends State<BoardSpace> {
       if (widget.hasMine) {
         widget.parentState.loseGame();
       }
+
+      bombsNearby = widget.parentState.countBombs(widget.index);
+
       setState(() {
         clickable = false;
         revealed = true;
