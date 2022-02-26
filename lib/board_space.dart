@@ -24,6 +24,7 @@ class _MineFieldState extends State<MineField> {
   List<BoardSpace>? board;
   String message = "";
   bool lostGame = false;
+  int openedSpaces = 0;
 
   bool flagAvailable() {
     return flagsSet < widget.mines;
@@ -36,22 +37,71 @@ class _MineFieldState extends State<MineField> {
     });
   }
 
+  void checkWinGame() {
+    openedSpaces++;
+    if (openedSpaces == widget.rows * widget.columns - widget.mines) {
+      setState(() {
+        message = "You Won!!!";
+      });
+    }
+  }
+
   int countBombs(int index) {
     Random rand = Random();
-    return rand.nextInt(8);
+    List<int> countSpaces = getNeighbourMines(index);
+    int counter = 0;
+    for (int num in countSpaces) {
+      if (board![num].hasMine) {
+        counter++;
+      }
+    }
+    return counter;
+  }
+
+  /*
+  0 1 2
+  3 X 4
+  5 6 7
+  */
+  List<int> getNeighbourMines(int index) {
+    List<int> neighbourMines = [];
+    int row = index ~/ widget.columns;
+    int column = index - widget.columns * row;
+
+    if (row > 0) neighbourMines.add(index - widget.columns); //1
+    if (row < widget.rows - 1) neighbourMines.add(index + widget.columns); //6
+    if (column > 0) neighbourMines.add(index - 1); //3
+    if (column < widget.columns - 1) neighbourMines.add(index + 1); //4
+    if (row > 0 && column > 0) {
+      neighbourMines.add(index - widget.columns - 1);
+    } //0
+    if (row < widget.rows - 1 && column < widget.columns - 1) {
+      neighbourMines.add(index + widget.columns + 1);
+    } //7
+    if (row > 0 && column < widget.columns - 1) {
+      neighbourMines.add(index - widget.columns + 1);
+    } //2
+    if (column > 0 && row < widget.rows - 1) {
+      neighbourMines.add(index + widget.columns - 1);
+    } //5
+
+    return neighbourMines;
   }
 
   void setMines(int index) {
     Random rand = Random();
+    List<int> blockedRegion = getNeighbourMines(index);
+    blockedRegion.add(index);
     while (mines < widget.mines) {
       int mineIndex = rand.nextInt(widget.rows * widget.columns);
-      if (mineIndex != index) {
+      if (!blockedRegion.contains(mineIndex)) {
         board![mineIndex] = BoardSpace(
           parentState: this,
           index: index,
           hasMine: true,
         );
         mines++;
+        blockedRegion.add(mineIndex);
       }
     }
     setState(() {
@@ -93,7 +143,7 @@ class _MineFieldState extends State<MineField> {
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 10,
             ),
-            itemCount: 100,
+            itemCount: widget.columns * widget.rows,
             itemBuilder: (context, index) {
               return (board != null)
                   ? Stack(

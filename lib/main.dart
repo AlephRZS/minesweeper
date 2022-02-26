@@ -62,7 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ],
       ),
-      body: const MineField(columns: 10, rows: 10, mines: 30),
+      body: const MineField(columns: 10, rows: 15, mines: 40),
       backgroundColor: Colors.black,
     );
   }
