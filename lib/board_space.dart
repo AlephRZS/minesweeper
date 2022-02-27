@@ -22,9 +22,45 @@ class _MineFieldState extends State<MineField> {
   int flagsSet = 0;
   bool minesSet = false;
   List<BoardSpace>? board;
+  List<BoardBlock>? gameBoard;
   String message = "";
   bool lostGame = false;
   int openedSpaces = 0;
+  final numbers = List.unmodifiable([
+    null,
+    const Text(
+      '1',
+      style: TextStyle(color: Colors.lightBlue, fontWeight: FontWeight.w700),
+    ),
+    const Text(
+      '2',
+      style: TextStyle(color: Colors.green, fontWeight: FontWeight.w700),
+    ),
+    const Text(
+      '3',
+      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
+    ),
+    const Text(
+      '4',
+      style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w700),
+    ),
+    const Text(
+      '5',
+      style: TextStyle(color: Colors.brown, fontWeight: FontWeight.w700),
+    ),
+    const Text(
+      '6',
+      style: TextStyle(color: Colors.cyan, fontWeight: FontWeight.w700),
+    ),
+    const Text(
+      '7',
+      style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+    ),
+    const Text(
+      '8',
+      style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w700),
+    ),
+  ]);
 
   bool flagAvailable() {
     return flagsSet < widget.mines;
@@ -104,6 +140,7 @@ class _MineFieldState extends State<MineField> {
         blockedRegion.add(mineIndex);
       }
     }
+
     setState(() {
       message = "$mines mines remaining";
       minesSet = true;
@@ -123,6 +160,10 @@ class _MineFieldState extends State<MineField> {
       ),
     );
   }
+
+  toggleFlag(int index) {}
+
+  clickSpace(int index) {}
 
   @override
   Widget build(BuildContext context) {
@@ -169,6 +210,59 @@ class _MineFieldState extends State<MineField> {
   }
 }
 
+class BoardBlock extends StatelessWidget {
+  const BoardBlock({
+    required this.hasFlag,
+    required this.index,
+    required this.parentState,
+    Key? key,
+  }) : super(key: key);
+  final bool hasFlag;
+  final int index;
+  final _MineFieldState parentState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.blueAccent,
+      margin: const EdgeInsets.all(1.0),
+      child: InkWell(
+        splashColor: Colors.grey,
+        onLongPress: parentState.toggleFlag(index),
+        onTap: parentState.clickSpace(index),
+        child: hasFlag ? const Icon(Icons.flag) : null,
+      ),
+    );
+  }
+}
+
+class RevealedBlock extends BoardBlock {
+  const RevealedBlock({
+    required this.hasFlag,
+    required this.index,
+    required this.parentState,
+    required this.minesNearby,
+    Key? key,
+  }) : super(
+            hasFlag: hasFlag, index: index, parentState: parentState, key: key);
+  final bool hasFlag;
+  final int index;
+  final _MineFieldState parentState;
+  final int minesNearby;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.blueGrey,
+      margin: const EdgeInsets.all(1.0),
+      child: InkWell(
+        splashColor: Colors.grey,
+        child: parentState.numbers[minesNearby],
+      ),
+    );
+  }
+}
+
 class BoardSpace extends StatefulWidget {
   const BoardSpace({
     required this.parentState,
@@ -203,10 +297,7 @@ class _BoardSpaceState extends State<BoardSpace> {
           Center(
             child: hasFlag ? const Icon(Icons.flag_sharp) : null,
           ),
-          Center(
-              child: bombsNearby != 0 && revealed && !widget.hasMine
-                  ? Text("$bombsNearby")
-                  : null),
+          Center(child: widget.parentState.numbers[bombsNearby]),
         ]),
       ),
     );
