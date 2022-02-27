@@ -18,49 +18,124 @@ class MineField extends StatefulWidget {
 }
 
 class _MineFieldState extends State<MineField> {
-  int mines = 0;
-  int flagsSet = 0;
-  bool minesSet = false;
-  List<BoardSpace>? board;
-  List<BoardBlock>? gameBoard;
+  late List<BoardBlock> gameBoard;
   String message = "";
-  bool lostGame = false;
+  bool gameEnded = false;
+  bool minesSet = false;
+
+  int flagsSet = 0;
   int openedSpaces = 0;
+
   final numbers = List.unmodifiable([
     null,
     const Text(
       '1',
-      style: TextStyle(color: Colors.lightBlue, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Color.fromARGB(255, 3, 107, 244),
+          fontWeight: FontWeight.w700,
+          fontSize: 20),
     ),
     const Text(
       '2',
-      style: TextStyle(color: Colors.green, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Color.fromARGB(255, 6, 114, 10),
+          fontWeight: FontWeight.w700,
+          fontSize: 20),
     ),
     const Text(
       '3',
-      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Color.fromARGB(255, 175, 16, 4),
+          fontWeight: FontWeight.w700,
+          fontSize: 20),
     ),
     const Text(
       '4',
-      style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Color.fromARGB(255, 3, 49, 87),
+          fontWeight: FontWeight.w700,
+          fontSize: 20),
     ),
     const Text(
       '5',
-      style: TextStyle(color: Colors.brown, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Color.fromARGB(255, 124, 40, 14),
+          fontWeight: FontWeight.w700,
+          fontSize: 20),
     ),
     const Text(
       '6',
-      style: TextStyle(color: Colors.cyan, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Color.fromARGB(255, 0, 111, 126),
+          fontWeight: FontWeight.w700,
+          fontSize: 20),
     ),
     const Text(
       '7',
-      style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Colors.black, fontWeight: FontWeight.w700, fontSize: 20),
     ),
     const Text(
       '8',
-      style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w700),
+      style: TextStyle(
+          color: Color.fromARGB(255, 66, 66, 66),
+          fontWeight: FontWeight.w700,
+          fontSize: 20),
     ),
   ]);
+
+  @override
+  void initState() {
+    super.initState();
+    gameBoard = List<BoardBlock>.generate(
+      widget.columns * widget.rows,
+      (index) => BoardBlock(
+        index: index,
+        hasFlag: false,
+        hasMine: false,
+        parentState: this,
+      ),
+    );
+    message = "Start game with ${widget.mines} mines";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Text(
+          message,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+            color: Colors.blue,
+          ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: widget.columns,
+            ),
+            itemCount: widget.columns * widget.rows,
+            itemBuilder: (context, index) {
+              return Stack(
+                children: [
+                  gameBoard[index],
+                  Center(
+                    child: gameBoard[index].hasMine && gameEnded
+                        ? const Icon(Icons.offline_bolt)
+                        : null,
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   bool flagAvailable() {
     return flagsSet < widget.mines;
@@ -69,7 +144,7 @@ class _MineFieldState extends State<MineField> {
   void loseGame() {
     setState(() {
       message = "You lost";
-      lostGame = true;
+      gameEnded = true;
     });
   }
 
@@ -78,16 +153,16 @@ class _MineFieldState extends State<MineField> {
     if (openedSpaces == widget.rows * widget.columns - widget.mines) {
       setState(() {
         message = "You Won!!!";
+        gameEnded = true;
       });
     }
   }
 
   int countBombs(int index) {
-    Random rand = Random();
     List<int> countSpaces = getNeighbourMines(index);
     int counter = 0;
     for (int num in countSpaces) {
-      if (board![num].hasMine) {
+      if (gameBoard[num].hasMine) {
         counter++;
       }
     }
@@ -128,97 +203,101 @@ class _MineFieldState extends State<MineField> {
     Random rand = Random();
     List<int> blockedRegion = getNeighbourMines(index);
     blockedRegion.add(index);
+    int mines = 0;
     while (mines < widget.mines) {
       int mineIndex = rand.nextInt(widget.rows * widget.columns);
       if (!blockedRegion.contains(mineIndex)) {
-        board![mineIndex] = BoardSpace(
-          parentState: this,
-          index: index,
+        bool flagInBlock = gameBoard[mineIndex].hasFlag;
+        gameBoard[mineIndex] = BoardBlock(
+          index: mineIndex,
+          hasFlag: flagInBlock,
           hasMine: true,
+          parentState: this,
         );
         mines++;
         blockedRegion.add(mineIndex);
       }
     }
-
     setState(() {
       message = "$mines mines remaining";
       minesSet = true;
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    message = "Start game with ${widget.mines} mines";
-    board = List<BoardSpace>.generate(
-      widget.columns * widget.rows,
-      (index) => BoardSpace(
-        parentState: this,
+  toggleFlag(int index) {
+    if (gameEnded) return;
+    bool flagInBlock = gameBoard[index].hasFlag;
+    if (!flagInBlock && flagAvailable()) {
+      flagsSet++;
+    } else if (flagInBlock) {
+      flagsSet--;
+    } else {
+      return;
+    }
+    bool mineInBlock = gameBoard[index].hasMine;
+    gameBoard[index] = BoardBlock(
         index: index,
-        hasMine: false,
-      ),
-    );
+        hasFlag: !flagInBlock,
+        hasMine: mineInBlock,
+        parentState: this);
+
+    setState(() {
+      message = "${widget.mines - flagsSet} mines remaining";
+    });
   }
 
-  toggleFlag(int index) {}
+  clickSpace(int index) {
+    if (gameEnded) return;
+    if (!gameBoard[index].hasFlag) {
+      if (!minesSet) {
+        setMines(index);
+      } else if (gameBoard[index].hasMine) {
+        loseGame();
+        return;
+      }
+      int minesNearby = countBombs(index);
+      setState(() {
+        gameBoard[index] = RevealedBlock(
+            index: index, parentState: this, minesNearby: minesNearby);
+      });
+      if (minesNearby == 0) {
+        for (int num in getNeighbourMines(index)) {
+          if (gameBoard[num] is! RevealedBlock) {
+            clickSpace(num);
+          }
+        }
+      }
+      checkWinGame();
+    }
+  }
 
-  clickSpace(int index) {}
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        Text(
-          message,
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-            color: Colors.blue,
-          ),
-        ),
-        Expanded(
-          child: GridView.builder(
-            shrinkWrap: true,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 10,
-            ),
-            itemCount: widget.columns * widget.rows,
-            itemBuilder: (context, index) {
-              return (board != null)
-                  ? Stack(
-                      children: [
-                        board![index],
-                        Center(
-                          child: board![index].hasMine && lostGame
-                              ? const Icon(Icons.offline_bolt)
-                              : null,
-                        ),
-                      ],
-                    )
-                  : BoardSpace(
-                      parentState: this,
-                      index: 0,
-                      hasMine: false,
-                    );
-            },
-          ),
-        ),
-      ],
-    );
+  revealedClick(int index, int minesNearby) {
+    List<int> neighbours = getNeighbourMines(index);
+    int counter = 0;
+    for (int num in neighbours) {
+      if (gameBoard[num].hasFlag) counter++;
+    }
+    if (minesNearby == counter) {
+      for (int num in neighbours) {
+        if (gameBoard[num] is! RevealedBlock) {
+          clickSpace(num);
+        }
+      }
+    }
   }
 }
 
 class BoardBlock extends StatelessWidget {
   const BoardBlock({
-    required this.hasFlag,
     required this.index,
+    required this.hasFlag,
+    required this.hasMine,
     required this.parentState,
     Key? key,
   }) : super(key: key);
-  final bool hasFlag;
   final int index;
+  final bool hasFlag;
+  final bool hasMine;
   final _MineFieldState parentState;
 
   @override
@@ -228,9 +307,9 @@ class BoardBlock extends StatelessWidget {
       margin: const EdgeInsets.all(1.0),
       child: InkWell(
         splashColor: Colors.grey,
-        onLongPress: parentState.toggleFlag(index),
-        onTap: parentState.clickSpace(index),
-        child: hasFlag ? const Icon(Icons.flag) : null,
+        onLongPress: () => parentState.toggleFlag(index),
+        onTap: () => parentState.clickSpace(index),
+        child: hasFlag ? const Center(child: Icon(Icons.flag)) : null,
       ),
     );
   }
@@ -238,16 +317,16 @@ class BoardBlock extends StatelessWidget {
 
 class RevealedBlock extends BoardBlock {
   const RevealedBlock({
-    required this.hasFlag,
-    required this.index,
-    required this.parentState,
+    required int index,
+    required _MineFieldState parentState,
     required this.minesNearby,
     Key? key,
   }) : super(
-            hasFlag: hasFlag, index: index, parentState: parentState, key: key);
-  final bool hasFlag;
-  final int index;
-  final _MineFieldState parentState;
+            index: index,
+            hasFlag: false,
+            hasMine: false,
+            parentState: parentState,
+            key: key);
   final int minesNearby;
 
   @override
@@ -257,87 +336,9 @@ class RevealedBlock extends BoardBlock {
       margin: const EdgeInsets.all(1.0),
       child: InkWell(
         splashColor: Colors.grey,
-        child: parentState.numbers[minesNearby],
+        child: Center(child: parentState.numbers[minesNearby]),
+        onTap: () => parentState.revealedClick(index, minesNearby),
       ),
     );
-  }
-}
-
-class BoardSpace extends StatefulWidget {
-  const BoardSpace({
-    required this.parentState,
-    required this.index,
-    required this.hasMine,
-    Key? key,
-  }) : super(key: key);
-  final _MineFieldState parentState;
-  final int index;
-  final bool hasMine;
-
-  @override
-  _BoardSpaceState createState() => _BoardSpaceState();
-}
-
-class _BoardSpaceState extends State<BoardSpace> {
-  bool clickable = true;
-  bool revealed = false;
-  bool hasFlag = false;
-  int bombsNearby = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: revealed ? Colors.blueGrey : Colors.blueAccent,
-      margin: const EdgeInsets.all(1.0),
-      child: InkWell(
-        splashColor: Colors.grey,
-        onLongPress: clickable ? _buttonFlag : null,
-        onTap: clickable ? _buttonClick : null,
-        child: Stack(children: [
-          Center(
-            child: hasFlag ? const Icon(Icons.flag_sharp) : null,
-          ),
-          Center(child: widget.parentState.numbers[bombsNearby]),
-        ]),
-      ),
-    );
-  }
-
-  void _buttonFlag() {
-    if (widget.parentState.lostGame) return;
-    if (!hasFlag && widget.parentState.flagAvailable()) {
-      widget.parentState.flagsSet++;
-    } else if (hasFlag) {
-      widget.parentState.flagsSet--;
-    } else {
-      return;
-    }
-    setState(() {
-      hasFlag = !hasFlag;
-    });
-    _MineFieldState boardState = widget.parentState;
-    boardState.setState(() {
-      boardState.message =
-          "${boardState.mines - boardState.flagsSet} mines remaining";
-    });
-  }
-
-  void _buttonClick() {
-    if (widget.parentState.lostGame) return;
-    if (!hasFlag) {
-      if (!widget.parentState.minesSet) {
-        widget.parentState.setMines(widget.index);
-      }
-      if (widget.hasMine) {
-        widget.parentState.loseGame();
-      }
-
-      bombsNearby = widget.parentState.countBombs(widget.index);
-
-      setState(() {
-        clickable = false;
-        revealed = true;
-      });
-    }
   }
 }
